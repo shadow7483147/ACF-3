@@ -32,7 +32,7 @@ end)
 
 net.Receive("ACF_RenderDamage", function(len)
 	print("ACFRenderDamage:" .. len)
-	local Table = net.ReadTable()
+	local Table = net.ReadTable() -- TODO: this is garbage. stop it.
 
 	for _, v in ipairs(Table) do
 		local ent, Health, MaxHealth = v, v.Health, v.MaxHealth
@@ -124,37 +124,21 @@ do -- Debris Effects ------------------------
 	end
 
 	local function CreateDebris(Data)
-		--[[
-		local Debris = ents.CreateClientProp(Data.Model)
-
-		if not IsValid(Debris) then return end
-
-		local Lifetime = DebrisLife:GetFloat() * math.Rand(0.5, 1)
-
-		Debris:SetPos(Data.Position)
-		Debris:SetAngles(Data.Angles)
-		Debris:SetColor(Data.Color)
-		Debris:SetMaterial(Data.Material)
-		]]--
-
-		local Data = Data --trades memory usage for cpu time, i think
-
-		local CurrentColor = Data.EntColor
-		local NewColor = Vector(CurrentColor.r, CurrentColor.g, CurrentColor.b) * math.Rand(0.3, 0.6)
 
 		local Lifetime = DebrisLife:GetFloat() * math.Rand(0.5, 1)
 
 		local Debris = ents.CreateClientProp(Data.Entity:GetModel())
+			local CurrentColor = Data.EntColor
+			local NewColor = Vector(CurrentColor.r, CurrentColor.g, CurrentColor.b) * math.Rand(0.3, 0.6)
 
-		Debris:SetPos(Data.EntPos)
-		Debris:SetAngles(Data.EntAngles)
-		Debris:SetMaterial(Data.EntMaterial)
-		Debris:SetColor(Color(NewColor.r, NewColor.g, NewColor.b, CurrentColor.a))
+			Debris:SetPos(Data.EntPos)
+			Debris:SetAngles(Data.EntAngles)
+			Debris:SetMaterial(Data.EntMaterial)
+			Debris:SetColor(Color(NewColor.r, NewColor.g, NewColor.b, CurrentColor.a))
 
-		if not CollideAll:GetBool() then
-			Debris:SetCollisionGroup(COLLISION_GROUP_WORLD)
-		end
-
+			if not CollideAll:GetBool() then
+				Debris:SetCollisionGroup(COLLISION_GROUP_WORLD)
+			end
 		Debris:Spawn()
 
 		if DebrisSmoke:GetBool() then
@@ -173,12 +157,6 @@ do -- Debris Effects ------------------------
 			PhysObj:ApplyForceCenter(Data.Normal * Data.Power)
 		end
 
-		--[[
-		if IsValid(PhysObj) then
-			PhysObj:ApplyForceOffset(Data.Normal * Data.Power, Data.Position + VectorRand() * 20)
-		end
-		--]]
-
 		timer.Simple(Lifetime, function()
 			FadeAway(Debris)
 		end)
@@ -190,8 +168,6 @@ do -- Debris Effects ------------------------
 		local Gib = ents.CreateClientProp(GibModel:format(math.random(1, 5)))
 
 		if not IsValid(Gib) then return end
-
-		local Data = Data
 
 		local Lifetime = GibLife:GetFloat() * math.Rand(0.5, 1)
 		local Offset   = ACF.RandomVector(Data.EntOBBMins, Data.EntOBBMaxs)
@@ -230,42 +206,12 @@ do -- Debris Effects ------------------------
 		return true
 	end
 
-	net.Receive("ACF_Debris", function(len) --compile a table we can use to send to the debris function
-		--[[
-		local Data = util.JSONToTable(net.ReadString())
-
-		if not AllowDebris:GetBool() then return end
-
-		local Debris = CreateDebris(Data)
-
-		if IsValid(Debris) then
-			local Multiplier = GibMult:GetFloat()
-			local Radius     = Debris:BoundingRadius()
-			local Min        = Debris:OBBMins()
-			local Max        = Debris:OBBMaxs()
-
-			if Data.CanGib and Multiplier > 0 then
-				local GibCount = math.Clamp(Radius * 0.1, 1, math.max(10 * Multiplier, 1))
-
-				for _ = 1, GibCount do
-					if not CreateGib(Data, Min, Max) then
-						break
-					end
-				end
-			end
-		end
-
-		local Effect = EffectData()
-			Effect:SetOrigin(Data.Position) -- TODO: Change this to the hit vector, but we need to redefine HitVec as HitNorm
-			Effect:SetScale(20)
-		util.Effect("cball_explode", Effect)
-		--]]
-		print("ACFdebris: " .. len)
-
+	net.Receive("ACF_Debris", function() --compile a table we can use to send to the debris function
 		if not AllowDebris:GetBool() then return end
 
 		local Entity = net.ReadEntity()
 		if not IsValid(Entity) then return end
+
 		local Normal = net.ReadVector()
 		local Power = bit.lshift(net.ReadUInt(12), 8) --bit.lshift returns a new copy of the number and doesn't modify it
 		local Enflame = net.ReadBool()
@@ -288,12 +234,6 @@ do -- Debris Effects ------------------------
 
 		if IsValid(Debris) then
 			local Multiplier = GibMult:GetFloat()
-			--[[
-			local Radius     = Debris:BoundingRadius()
-			local Min        = Debris:OBBMins()
-			local Max        = Debris:OBBMaxs()
-			--]]
-
 			local GibCount = math.Clamp(EntTable.EntRadius * 0.1, 1, math.max(10 * Multiplier, 1))
 
 			for _ = 1, GibCount do

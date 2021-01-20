@@ -541,43 +541,10 @@ do -- Remove Props ------------------------------
 			net.SendPVS(Data.Pos)
 
 			Queue[Entity] = nil
-
-			--[[
-			local JSON = util.TableToJSON(Data)
-
-			net.Start("ACF_Debris")
-				net.WriteString(JSON)
-			net.SendPVS(Data.Position)
-
-			Queue[Entity] = nil
-			--]]
 		end
 	end
 
 	local function DebrisNetter(Entity, Normal, Power, Ignite)
-		--[[
-		if not ACF.GetServerBool("CreateDebris") then return end
-		if Queue[Entity] then return end
-
-		local Current = Entity:GetColor()
-		local New     = Vector(Current.r, Current.g, Current.b) * math.Rand(0.3, 0.6)
-
-		if not next(Queue) then
-			timer.Create("ACF_DebrisQueue", 0, 1, SendQueue)
-		end
-
-		Queue[Entity] = {
-			Position = Entity:GetPos(),
-			Angles   = Entity:GetAngles(),
-			Material = Entity:GetMaterial(),
-			Model    = Entity:GetModel(),
-			Color    = Color(New.x, New.y, New.z, Current.a),
-			Normal   = Normal,
-			Power    = Power,
-			CanGib   = CanGib or nil,
-			Ignite   = Ignite or nil,
-		}
-		--]]
 		if Queue[Entity] then return end
 
 		if not next(Queue) then
