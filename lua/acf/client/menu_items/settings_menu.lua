@@ -78,6 +78,9 @@ do -- Clientside settings
 		local Debris = Base:AddCheckBox("Allow creation of clientside debris.")
 		Debris:SetConVar("acf_debris")
 
+		local DebrisSmoke = Base:AddCheckBox("Enable smoking emission from debris.")
+		DebrisSmoke:SetConVar("acf_debris_smoke")
+
 		local Collisions = Base:AddCheckBox("Allow debris to collide with entities.")
 		Collisions:SetConVar("acf_debris_collision")
 
