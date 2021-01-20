@@ -29,7 +29,7 @@ local function IsLegal(Entity)
 	local Phys = Entity:GetPhysicsObject()
 
 	if Entity.ACF.PhysObj ~= Phys then
-		if Phys:GetVolume() then
+		if IsValid(Phys) and Phys:GetVolume() then
 			Entity.ACF.PhysObj = Phys -- Updated PhysObj
 		else
 			Entity:Remove() -- Remove spherical trash

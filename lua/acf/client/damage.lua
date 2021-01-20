@@ -30,11 +30,12 @@ hook.Add("PostDrawOpaqueRenderables", "ACF_RenderDamage", function()
 	cam.End3D()
 end)
 
-net.Receive("ACF_RenderDamage", function()
+net.Receive("ACF_RenderDamage", function(len)
+	print("ACFRenderDamage:" .. len)
 	local Table = net.ReadTable()
 
 	for _, v in ipairs(Table) do
-		local ent, Health, MaxHealth = ents.GetByIndex(v.ID), v.Health, v.MaxHealth
+		local ent, Health, MaxHealth = v, v.Health, v.MaxHealth
 		if not IsValid(ent) then return end
 
 		if Health ~= MaxHealth then
@@ -264,15 +265,16 @@ do -- Debris Effects ------------------------
 		if not AllowDebris:GetBool() then return end
 
 		local Entity = net.ReadEntity()
+		if not IsValid(Entity) then return end
 		local Normal = net.ReadVector()
-		local Power = bit.lshift(net.ReadUInt(15), 8) --bit.lshift returns a new copy of the number and doesn't modify it
-		local Ignite = net.ReadBool()
+		local Power = bit.lshift(net.ReadUInt(12), 8) --bit.lshift returns a new copy of the number and doesn't modify it
+		local Enflame = net.ReadBool()
 
-		local Data = { --now that we have the essentials, we just reconstruct the attack data on our client.
+		local EntTable = { --now that we have the essentials, we just reconstruct the attack data on our client.
 			Entity = Entity,
 			Normal = Normal,
 			Power = Power,
-			Ignite = Ignite,
+			Ignite = Enflame, --appeasing the linter (this table used to be called Data too)
 			EntRadius = Entity:BoundingRadius(),
 			EntOBBMins = Entity:OBBMins(),
 			EntOBBMaxs = Entity:OBBMaxs(),
@@ -282,7 +284,7 @@ do -- Debris Effects ------------------------
 			EntColor = Entity:GetColor()
 		}
 
-		local Debris = CreateDebris(Data)
+		local Debris = CreateDebris(EntTable)
 
 		if IsValid(Debris) then
 			local Multiplier = GibMult:GetFloat()
@@ -292,10 +294,10 @@ do -- Debris Effects ------------------------
 			local Max        = Debris:OBBMaxs()
 			--]]
 
-			local GibCount = math.Clamp(Data.EntRadius * 0.1, 1, math.max(10 * Multiplier, 1))
+			local GibCount = math.Clamp(EntTable.EntRadius * 0.1, 1, math.max(10 * Multiplier, 1))
 
 			for _ = 1, GibCount do
-				if not CreateGib(Data) then
+				if not CreateGib(EntTable) then
 					break
 				end
 			end

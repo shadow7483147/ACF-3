@@ -447,7 +447,7 @@ do -- Deal Damage ---------------------------
 						for _, v in pairs(ACF_HealthUpdateList) do
 							if IsValid(v) then
 								table.insert(Table, {
-									ID = v:EntIndex(),
+									Entity = v,
 									Health = v.ACF.Health,
 									MaxHealth = v.ACF.MaxHealth
 								})
@@ -513,7 +513,7 @@ do -- Remove Props ------------------------------
 			net.Start("ACF_Debris", true)
 				net.WriteEntity(Entity)
 				net.WriteVector(Data.Normal)
-				net.WriteUInt(Power, 15)
+				net.WriteUInt(Power, 12)
 				net.WriteBool(Data.Ignite)
 			net.SendPVS(Data.Pos)
 
@@ -670,7 +670,9 @@ do -- Remove Props ------------------------------
 		end
 
 		constraint.RemoveAll(Entity)
-		Entity:Remove()
+		Entity:PhysicsDestroy()
+		Entity:SetNoDraw(true)
+		timer.Simple(1, function() if IsValid(Entity) then Entity:Remove() end end)
 
 		return Debris
 	end
@@ -687,9 +689,9 @@ do -- Remove Props ------------------------------
 		util.Effect("cball_explode", Effect, nil, true)
 
 		constraint.RemoveAll(Entity)
-		Entity:PhysicsDestroy()
+		Entity:PhysicsDestroy() --the "proper" way to do this would be like, a global bullet filter, i guess, but you know what's even better? not even being able to interact with traces at all.
 		Entity:SetNoDraw(true)
-		timer.Simple(1, function() Entity:Remove() end)
+		timer.Simple(1, function() if IsValid(Entity) then Entity:Remove() end end)
 	end
 
 	ACF_KillChildProps = ACF.KillChildProps
