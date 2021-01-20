@@ -10,7 +10,6 @@ do -- Spawning and Updating --------------------
 	local Piledrivers = ACF.Classes.Piledrivers
 	local AmmoTypes   = ACF.Classes.AmmoTypes
 	local CheckLegal  = ACF_CheckLegal
-	local ACF_RECOIL  = GetConVar("acf_recoilpush")
 
 	local function VerifyData(Data)
 		if isstring(Data.Id) then
@@ -129,7 +128,7 @@ do -- Spawning and Updating --------------------
 			end
 
 			function BulletData:OnEndFlight(Trace)
-				if not ACF_RECOIL:GetBool() then return end
+				if not ACF.RecoilPush then return end
 				if not IsValid(Entity) then return end
 				if not Trace.HitWorld then return end
 				if Trace.Fraction == 0 then return end
@@ -341,8 +340,8 @@ do -- Firing ------------------------------------
 
 	-- The entity should produce a "click" sound if this function returns false
 	function ENT:CanShoot()
-		if not ACF.GetServerBool("GunfireEnabled") then return false end
-		if not ACF.GetServerBool("AllowFunEnts") then return false end
+		if not ACF.GunfireEnabled then return false end
+		if not ACF.AllowFunEnts then return false end
 		if hook.Run("ACF_FireShell", self) == false then return false end
 
 		return self.CurrentShot > 0
@@ -357,7 +356,7 @@ do -- Firing ------------------------------------
 			local Sound  = self.SoundPath or Impact:format(math.random(5, 6))
 			local Bullet = self.BulletData
 
-			self:EmitSound(Sound, 500, math.Rand(98, 102))
+			self:EmitSound(Sound, 70, math.Rand(98, 102), ACF.Volume)
 			self:SetSequence("load")
 
 			Bullet.Owner  = self:GetUser(self.Inputs.Fire.Src) -- Must be updated on every shot
@@ -377,7 +376,7 @@ do -- Firing ------------------------------------
 				self:SetSequence("idle")
 			end)
 		else
-			self:EmitSound("weapons/pistol/pistol_empty.wav", 500, math.Rand(98, 102))
+			self:EmitSound("weapons/pistol/pistol_empty.wav", 70, math.Rand(98, 102), ACF.Volume)
 
 			Delay = 1
 		end

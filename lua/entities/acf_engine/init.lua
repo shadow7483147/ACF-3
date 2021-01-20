@@ -111,11 +111,10 @@ local TimerCreate = timer.Create
 local TimerSimple = timer.Simple
 local TimerRemove = timer.Remove
 local HookRun     = hook.Run
-local Gamemode    = GetConVar("acf_gamemode")
 
 -- Fuel consumption is increased on competitive servers
 local function GetEfficiencyMult()
-	return Gamemode:GetInt() == 2 and ACF.CompFuelRate or 1
+	return ACF.Gamemode == 3 and ACF.CompFuelRate or 1
 end
 
 local function GetPitchVolume(Engine)
@@ -123,7 +122,7 @@ local function GetPitchVolume(Engine)
 	local Pitch = math.Clamp(20 + (RPM * Engine.SoundPitch) * 0.02, 1, 255)
 	local Volume = 0.25 + (0.1 + 0.9 * ((RPM / Engine.LimitRPM) ^ 1.5)) * Engine.Throttle * 0.666
 
-	return Pitch, Volume
+	return Pitch, Volume * ACF.Volume
 end
 
 local function GetNextFuelTank(Engine)
@@ -146,7 +145,7 @@ local function CheckDistantFuelTanks(Engine)
 
 	for Tank in pairs(Engine.FuelTanks) do
 		if EnginePos:DistToSqr(Tank:GetPos()) > 262144 then
-			Engine:EmitSound(UnlinkSound:format(math.random(1, 3)), 500, 100)
+			Engine:EmitSound(UnlinkSound:format(math.random(1, 3)), 70, 100, ACF.Volume)
 
 			Engine:Unlink(Tank)
 		end
@@ -266,6 +265,7 @@ do -- Spawn and Update functions
 		Entity.ShortName        = EngineData.ID
 		Entity.EntType          = Class.Name
 		Entity.ClassData        = Class
+		Entity.DefaultSound     = EngineData.Sound
 		Entity.SoundPitch       = EngineData.Pitch or 1
 		Entity.PeakTorque       = EngineData.Torque
 		Entity.PeakTorqueHeld   = EngineData.Torque
@@ -347,7 +347,6 @@ do -- Spawn and Update functions
 		Engine.Throttle     = 0
 		Engine.FlyRPM       = 0
 		Engine.SoundPath    = EngineData.Sound
-		Engine.DefaultSound = EngineData.Sound
 		Engine.Inputs       = WireLib.CreateInputs(Engine, { "Active", "Throttle" })
 		Engine.Outputs      = WireLib.CreateOutputs(Engine, { "RPM", "Torque", "Power", "Fuel Use", "Entity [ENTITY]", "Mass", "Physical Mass" })
 		Engine.DataStore    = ACF.GetEntityArguments("acf_engine")
@@ -639,7 +638,7 @@ function ENT:CalcRPM()
 		self.FuelUsage = 60 * Consumption / DeltaTime
 
 		FuelTank:Consume(Consumption)
-	elseif Gamemode:GetInt() ~= 0 then -- Sandbox gamemode servers will require no fuel
+	elseif ACF.Gamemode ~= 1 then -- Sandbox gamemode servers will require no fuel
 		SetActive(self, false)
 
 		self.FuelUsage = 0

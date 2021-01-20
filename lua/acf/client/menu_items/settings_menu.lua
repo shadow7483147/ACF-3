@@ -10,17 +10,7 @@ do -- Clientside settings
 
 	ACF.AddMenuItem(1, "Settings", "Clientside Settings", "user", ACF.GenerateClientSettings)
 
-	ACF.AddClientSettings("Effects and Visual Elements", function(Base)
-		local Ropes = Base:AddCheckBox("Create mobility rope links.")
-		Ropes:SetConVar("acf_mobilityropelinks")
-
-		local Particles = Base:AddSlider("Particle Mult.", 0.1, 1, 2)
-		Particles:SetConVar("acf_cl_particlemul")
-
-		Base:AddHelp("Defines the clientside particle multiplier, reduce it if you're experiencing lag when ACF effects are created.")
-	end)
-
-	ACF.AddClientSettings("Entity Information", function(Base)
+	ACF.AddClientSettings(1, "Entity Information", function(Base)
 		local InfoValue = InfoHelp[Ent_Info:GetInt()] and Ent_Info:GetInt() or 1
 
 		Base:AddLabel("Display ACF entity information:")
@@ -57,19 +47,34 @@ do -- Clientside settings
 		Base:AddHelp("Requires hitboxes to be enabled.")
 	end)
 
-	ACF.AddClientSettings("Legal Checks", function(Base)
+	ACF.AddClientSettings(100, "Sound Volume", function(Base)
+		local Volume = Base:AddSlider("Client Sound Volume", 0, 1, 2)
+		Volume:SetClientData("Volume", "OnValueChanged")
+		Volume:DefineSetter(function(Panel, _, _, Value)
+			Panel:SetValue(Value)
+
+			return Value
+		end)
+
+		Base:AddHelp("For the moment, this will only affect sounds that are played from the clientside.")
+	end)
+
+	ACF.AddClientSettings(101, "Effects and Visual Elements", function(Base)
+		local Ropes = Base:AddCheckBox("Create mobility rope links.")
+		Ropes:SetConVar("acf_mobilityropelinks")
+
+		local Particles = Base:AddSlider("Particle Mult.", 0.1, 1, 2)
+		Particles:SetConVar("acf_cl_particlemul")
+
+		Base:AddHelp("Defines the clientside particle multiplier, reduce it if you're experiencing lag when ACF effects are created.")
+	end)
+
+	ACF.AddClientSettings(201, "Legal Checks", function(Base)
 		local Hints = Base:AddCheckBox("Enable hints on entity disabling.")
 		Hints:SetConVar("acf_legalhints")
 	end)
 
-	ACF.AddClientSettings("Tool Category", function(Base)
-		local Category = Base:AddCheckBox("Use custom category for ACF tools.")
-		Category:SetConVar("acf_tool_category")
-
-		Base:AddHelp("You will need to rejoin the server for this option to apply.")
-	end)
-
-	ACF.AddClientSettings("Debris", function(Base)
+	ACF.AddClientSettings(301, "Debris", function(Base)
 		local Debris = Base:AddCheckBox("Allow creation of clientside debris.")
 		Debris:SetConVar("acf_debris")
 
@@ -93,12 +98,130 @@ do -- Clientside settings
 
 		Base:AddHelp("Defines how long each debris gib will live before fading out.")
 	end)
+
+	ACF.AddClientSettings(401, "Tool Category", function(Base)
+		local Category = Base:AddCheckBox("Use custom category for ACF tools.")
+		Category:SetConVar("acf_tool_category")
+
+		Base:AddHelp("You will need to rejoin the server for this option to apply.")
+	end)
 end
 
 do -- Serverside settings
 	ACF.AddMenuItem(101, "Settings", "Serverside Settings", "server", ACF.GenerateServerSettings)
 
-	ACF.AddServerSettings("Fun Entities and Menu", function(Base)
+	ACF.AddServerSettings(1, "General Settings", function(Base)
+		Base:AddLabel("ACF Gamemode for this server:")
+
+		local Gamemode = Base:AddComboBox()
+		Gamemode:AddChoice("Sandbox")
+		Gamemode:AddChoice("Classic")
+		Gamemode:AddChoice("Competitive")
+		Gamemode:SetServerData("Gamemode", "OnSelect")
+		Gamemode:DefineSetter(function(Panel, _, _, Value)
+			if Panel.selected == Value then return end -- God bless derma
+
+			Panel:ChooseOptionID(Value)
+
+			return Value
+		end)
+
+		Base:AddHelp("Each gamemode has its own restrictions, Sandbox being the most relaxed and Competitive the most strict.")
+
+		local Admins = Base:AddCheckBox("Allow admins to control server data.")
+		Admins:SetServerData("ServerDataAllowAdmin", "OnChange")
+		Admins:DefineSetter(function(Panel, _, _, Value)
+			Panel:SetValue(Value)
+
+			return Value
+		end)
+
+		Base:AddHelp("If enabled, admins will be able to mess with the settings on this panel.")
+
+		local Info = Base:AddCheckBox("Restrict entity information.")
+		Info:SetServerData("RestrictInfo", "OnChange")
+		Info:DefineSetter(function(Panel, _, _, Value)
+			Panel:SetValue(Value)
+
+			return Value
+		end)
+
+		Base:AddHelp("You'll need the player's permissions in order to check relevant information on entities owned by them.")
+
+		local Gunfire = Base:AddCheckBox("Allow weapon fire.")
+		Gunfire:SetServerData("GunfireEnabled", "OnChange")
+		Gunfire:DefineSetter(function(Panel, _, _, Value)
+			Panel:SetValue(Value)
+
+			return Value
+		end)
+
+		local Health = Base:AddSlider("Health Factor", 0.01, 2, 2)
+		Health:SetServerData("HealthFactor", "OnValueChanged")
+		Health:DefineSetter(function(Panel, _, _, Value)
+			Panel:SetValue(Value)
+
+			return Value
+		end)
+
+		local Fuel = Base:AddSlider("Fuel Factor", 0.01, 2, 2)
+		Fuel:SetServerData("FuelFactor", "OnValueChanged")
+		Fuel:DefineSetter(function(Panel, _, _, Value)
+			Panel:SetValue(Value)
+
+			return Value
+		end)
+
+		local CompFuel = Base:AddSlider("Competitive Fuel Factor", 0.01, 2, 2)
+		CompFuel:SetServerData("CompFuelFactor", "OnValueChanged")
+		CompFuel:DefineSetter(function(Panel, _, _, Value)
+			Panel:SetValue(Value)
+
+			return Value
+		end)
+
+		Base:AddHelp("Only applies to servers with their ACF Gamemode set to Competitive.")
+	end)
+
+	ACF.AddServerSettings(100, "Sound Volume", function(Base)
+		local Volume = Base:AddSlider("Server Sound Volume", 0, 1, 2)
+		Volume:SetServerData("Volume", "OnValueChanged")
+		Volume:DefineSetter(function(Panel, _, _, Value)
+			Panel:SetValue(Value)
+
+			return Value
+		end)
+
+		Base:AddHelp("Will affect a handful of sounds that are played from the serverside. This will be deprecated in the future.")
+	end)
+
+	ACF.AddServerSettings(101, "Entity Pushing", function(Base)
+		local HEPush = Base:AddCheckBox("Push entities due to HE forces.")
+		HEPush:SetServerData("HEPush", "OnChange")
+		HEPush:DefineSetter(function(Panel, _, _, Value)
+			Panel:SetValue(Value)
+
+			return Value
+		end)
+
+		local KEPush = Base:AddCheckBox("Push entities due to kinetic forces.")
+		KEPush:SetServerData("KEPush", "OnChange")
+		KEPush:DefineSetter(function(Panel, _, _, Value)
+			Panel:SetValue(Value)
+
+			return Value
+		end)
+
+		local Recoil = Base:AddCheckBox("Push entities due to weapon recoil.")
+		Recoil:SetServerData("RecoilPush", "OnChange")
+		Recoil:DefineSetter(function(Panel, _, _, Value)
+			Panel:SetValue(Value)
+
+			return Value
+		end)
+	end)
+
+	ACF.AddServerSettings(201, "Fun Entities and Menu", function(Base)
 		local Entities = Base:AddCheckBox("Allow use of Fun Entities.")
 		Entities:SetServerData("AllowFunEnts", "OnChange")
 		Entities:DefineSetter(function(Panel, _, _, Value)
@@ -120,7 +243,27 @@ do -- Serverside settings
 		Base:AddHelp("Changes on this option will only take effect once the players reload their menu.")
 	end)
 
-	ACF.AddServerSettings("Custom Killicons", function(Base)
+	ACF.AddServerSettings(301, "Workshop Content", function(Base)
+		local Content = Base:AddCheckBox("Enable workshop content download for clients.")
+		Content:SetServerData("WorkshopContent", "OnChange")
+		Content:DefineSetter(function(Panel, _, _, Value)
+			Panel:SetValue(Value)
+
+			return Value
+		end)
+
+		local Extra = Base:AddCheckBox("Enable extra workshop content download for clients.")
+		Extra:SetServerData("WorkshopExtras", "OnChange")
+		Extra:DefineSetter(function(Panel, _, _, Value)
+			Panel:SetValue(Value)
+
+			return Value
+		end)
+
+		Base:AddHelp("Both of these options require a server restart to apply changes.")
+	end)
+
+	ACF.AddServerSettings(401, "Custom Killicons", function(Base)
 		local Icons = Base:AddCheckBox("Use custom killicons for ACF entities.")
 		Icons:SetServerData("UseKillicons", "OnChange")
 		Icons:DefineSetter(function(Panel, _, _, Value)
@@ -132,7 +275,7 @@ do -- Serverside settings
 		Base:AddHelp("Changing this option will require a server restart.")
 	end)
 
-	ACF.AddServerSettings("Debris", function(Base)
+	ACF.AddServerSettings(501, "Debris", function(Base)
 		local Debris = Base:AddCheckBox("Allow networking of debris to clients.")
 		Debris:SetServerData("CreateDebris", "OnChange")
 		Debris:DefineSetter(function(Panel, _, _, Value)
@@ -162,11 +305,3 @@ do -- Serverside settings
 		Base:AddHelp("Multiplier for the amount of serverside fireballs to be created.")
 	end)
 end
-
--- TODO
--- Replace acf_healthmod and ACF.Threshold
--- Replace acf_armormod and ACF.ArmorMod
--- Replace or deprecate acf_ammomod and ACF.AmmoMod
--- Replace acf_fuelrate and ACF.FuelRate
--- Replace acf_spalling
--- Replace acf_gunfire and ACF.GunfireEnabled

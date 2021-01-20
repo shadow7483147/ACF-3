@@ -6,7 +6,6 @@ include("shared.lua")
 -- Local Vars -----------------------------------
 
 local ACF          = ACF
-local ACF_RECOIL   = GetConVar("acf_recoilpush")
 local UnlinkSound  = "physics/metal/metal_box_impact_bullet%s.wav"
 local CheckLegal   = ACF_CheckLegal
 local Shove        = ACF.KEShove
@@ -117,6 +116,7 @@ do -- Spawn and Update functions --------------------------------
 		Entity.Cyclic         = Weapon.Cyclic and 60 / Weapon.Cyclic
 		Entity.ReloadTime     = Entity.Cyclic or 1
 		Entity.Spread         = Class.Spread
+		Entity.DefaultSound   = Class.Sound
 		Entity.HitBoxes       = ACF.HitBoxes[Weapon.Model]
 		Entity.Long           = Class.LongBarrel
 		Entity.NormalMuzzle   = Entity:WorldToLocal(Entity:GetAttachment(Entity:LookupAttachment("muzzle")).Pos)
@@ -183,7 +183,6 @@ do -- Spawn and Update functions --------------------------------
 
 		Gun.Owner        = Player -- MUST be stored on ent for PP
 		Gun.SoundPath    = Class.Sound
-		Gun.DefaultSound = Class.Sound
 		Gun.BarrelFilter = { Gun }
 		Gun.State        = "Empty"
 		Gun.Crates       = {}
@@ -373,7 +372,7 @@ do -- Metamethods --------------------------------
 			if TraceRes.Hit then
 				local Entity = TraceRes.Entity
 
-				if Entity == self.CurrentUser or Entity:CPPIGetOwner() == self.Owner then
+				if Entity == self.CurrentUser or Entity:CPPIGetOwner() == self:GetPlayer() then
 					self.BarrelFilter[#self.BarrelFilter + 1] = Entity
 
 					return self:BarrelCheck(Offset)
@@ -389,7 +388,7 @@ do -- Metamethods --------------------------------
 			if self.State ~= "Loaded" then -- Weapon is not loaded
 				if self.State == "Empty" and not self.Retry then
 					if not self:Load() then
-						self:EmitSound("weapons/pistol/pistol_empty.wav", 500, 100) -- Click!
+						self:EmitSound("weapons/pistol/pistol_empty.wav", 70, 100, ACF.Volume) -- Click!
 					end
 
 					self.Retry = true
@@ -487,7 +486,7 @@ do -- Metamethods --------------------------------
 		end
 
 		function ENT:Recoil()
-			if not ACF_RECOIL:GetBool() then return end
+			if not ACF.RecoilPush then return end
 
 			local Phys = self:GetPhysicsObject()
 			if not IsValid(Phys) then return end
@@ -524,7 +523,7 @@ do -- Metamethods --------------------------------
 
 			self:ReloadEffect(Reload and Time * 2 or Time)
 			self:SetState("Unloading")
-			self:EmitSound("weapons/357/357_reload4.wav", 500, 100)
+			self:EmitSound("weapons/357/357_reload4.wav", 70, 100, ACF.Volume)
 			self.CurrentShot = 0
 			self.BulletData  = EMPTY
 
@@ -607,7 +606,7 @@ do -- Metamethods --------------------------------
 			self:SetState("Loading")
 
 			if self.MagReload then -- Mag-fed/Automatically loaded
-				self:EmitSound("weapons/357/357_reload4.wav", 500, 100)
+				self:EmitSound("weapons/357/357_reload4.wav", 70, 100, ACF.Volume)
 
 				self.NextFire = ACF.CurTime + self.MagReload
 
@@ -737,8 +736,8 @@ do -- Metamethods --------------------------------
 					if Crate:GetPos():DistToSqr(Pos) > 62500 then -- 250 unit radius
 						self:Unlink(Crate)
 
-						self:EmitSound(UnlinkSound:format(math.random(1, 3)), 500, 100)
-						Crate:EmitSound(UnlinkSound:format(math.random(1, 3)), 500, 100)
+						self:EmitSound(UnlinkSound:format(math.random(1, 3)), 70, 100, ACF.Volume)
+						Crate:EmitSound(UnlinkSound:format(math.random(1, 3)), 70, 100, ACF.Volume)
 					end
 				end
 			end

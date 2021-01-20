@@ -30,6 +30,9 @@ SWEP.DrawAmmo = false
 SWEP.DrawCrosshair = true
 SWEP.MaxDistance = 64 * 64 -- Squared distance
 
+local Spark = "ambient/energy/NewSpark0%s.wav"
+local Zap   = "weapons/physcannon/superphys_small_zap%s.wav"
+
 local function TeslaSpark(pos, magnitude)
 	zap = ents.Create("point_tesla")
 	zap:SetKeyValue("targetname", "teslab")
@@ -72,7 +75,7 @@ function SWEP:Think()
 	if CLIENT then return end
 
 	local Health, MaxHealth, Armor, MaxArmor = 0, 0, 0, 0
-	local Trace = self.Owner:GetEyeTrace()
+	local Trace = self:GetOwner():GetEyeTrace()
 	local Entity = Trace.Entity
 
 	self.LastDistance = Trace.StartPos:DistToSqr(Trace.HitPos)
@@ -118,7 +121,7 @@ function SWEP:PrimaryAttack()
 
 	local Entity = self.LastEntity
 	local Trace = self.LastTrace
-	local Owner = self.Owner
+	local Owner = self:GetOwner()
 
 	if ACF.Check(Entity) then
 		if Entity:IsPlayer() or Entity:IsNPC() then
@@ -139,7 +142,7 @@ function SWEP:PrimaryAttack()
 				Effect:SetEntity(self)
 			util.Effect("thruster_ring", Effect, true, true)
 
-			Entity:EmitSound("items/medshot4.wav")
+			Entity:EmitSound("items/medshot4.wav", nil, nil, ACF.Volume)
 		else
 			if CPPI and not Entity:CPPICanTool(Owner, "torch") then return end
 
@@ -161,7 +164,7 @@ function SWEP:PrimaryAttack()
 				Entity:ACF_OnRepaired(OldArmor, OldHealth, Armor, Health)
 			end
 
-			Entity:EmitSound("ambient/energy/NewSpark0" .. math.random(3, 5) .. ".wav")
+			Entity:EmitSound(Spark:format(math.random(3, 5)), nil, nil, ACF.Volume)
 			TeslaSpark(Trace.HitPos, 1)
 		end
 	end
@@ -178,7 +181,7 @@ function SWEP:SecondaryAttack()
 
 	local Entity = self.LastEntity
 	local Trace = self.LastTrace
-	local Owner = self.Owner
+	local Owner = self:GetOwner()
 
 	if ACF.Check(Entity) then
 		local HitRes = {}
@@ -204,7 +207,7 @@ function SWEP:SecondaryAttack()
 				Effect:SetOrigin(Trace.HitPos)
 			util.Effect("Sparks", Effect, true, true)
 
-			Entity:EmitSound("weapons/physcannon/superphys_small_zap" .. math.random(1, 4) .. ".wav")
+			Entity:EmitSound(Zap:format(math.random(1, 4)), nil, nil, ACF.Volume)
 		end
 	end
 end
