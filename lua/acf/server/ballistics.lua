@@ -369,11 +369,7 @@ do -- Terminal ballistics --------------------------
 			)
 		end
 
-		if HitRes.Kill then
-			local Debris = ACF_APKill(Target, Bullet.Flight:GetNormalized() , Energy.Kinetic)
-
-			table.insert(Bullet.Filter , Debris)
-		end
+		if HitRes.Kill then ACF_APKill(Target, Bullet.Flight:GetNormalized(), Energy.Kinetic, HitPos) end
 
 		HitRes.Ricochet = false
 

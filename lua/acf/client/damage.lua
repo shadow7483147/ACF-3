@@ -71,6 +71,7 @@ end)
 
 do -- Debris Effects ------------------------
 	local AllowDebris = GetConVar("acf_debris")
+	local DebrisSmoke = GetConVar("acf_debris_smoke")
 	local CollideAll  = GetConVar("acf_debris_collision")
 	local DebrisLife  = GetConVar("acf_debris_lifetime")
 	local GibMult     = GetConVar("acf_debris_gibmultiplier")
@@ -122,6 +123,7 @@ do -- Debris Effects ------------------------
 	end
 
 	local function CreateDebris(Data)
+		--[[
 		local Debris = ents.CreateClientProp(Data.Model)
 
 		if not IsValid(Debris) then return end
@@ -132,6 +134,21 @@ do -- Debris Effects ------------------------
 		Debris:SetAngles(Data.Angles)
 		Debris:SetColor(Data.Color)
 		Debris:SetMaterial(Data.Material)
+		]]--
+
+		local Data = Data --trades memory usage for cpu time, i think
+
+		local CurrentColor = Data.EntColor
+		local NewColor = Vector(CurrentColor.r, CurrentColor.g, CurrentColor.b) * math.Rand(0.3, 0.6)
+
+		local Lifetime = DebrisLife:GetFloat() * math.Rand(0.5, 1)
+
+		local Debris = ents.CreateClientProp(Data.Entity:GetModel())
+
+		Debris:SetPos(Data.EntPos)
+		Debris:SetAngles(Data.EntAngles)
+		Debris:SetMaterial(Data.EntMaterial)
+		Debris:SetColor(Color(NewColor.r, NewColor.g, NewColor.b, CurrentColor.a))
 
 		if not CollideAll:GetBool() then
 			Debris:SetCollisionGroup(COLLISION_GROUP_WORLD)
@@ -139,19 +156,27 @@ do -- Debris Effects ------------------------
 
 		Debris:Spawn()
 
-		Debris.EmberParticle = Particle(Debris, "embers_medium_01")
+		if DebrisSmoke:GetBool() then
+			Debris.EmberParticle = Particle(Debris, "embers_medium_01")
 
-		if Data.Ignite and math.Rand(0, 0.5) < ACF.DebrisIgniteChance then
-			Ignite(Debris, Lifetime)
-		else
-			Debris.SmokeParticle = Particle(Debris, "smoke_exhaust_01a")
+			if Data.Ignite then -- solid debris always ignites if specified
+				Ignite(Debris, Lifetime)
+			else
+				Debris.SmokeParticle = Particle(Debris, "smoke_exhaust_01a")
+			end
 		end
 
 		local PhysObj = Debris:GetPhysicsObject()
 
 		if IsValid(PhysObj) then
+			PhysObj:ApplyForceCenter(Data.Normal * Data.Power)
+		end
+
+		--[[
+		if IsValid(PhysObj) then
 			PhysObj:ApplyForceOffset(Data.Normal * Data.Power, Data.Position + VectorRand() * 20)
 		end
+		--]]
 
 		timer.Simple(Lifetime, function()
 			FadeAway(Debris)
@@ -160,27 +185,35 @@ do -- Debris Effects ------------------------
 		return Debris
 	end
 
-	local function CreateGib(Data, Min, Max)
+	local function CreateGib(Data)
 		local Gib = ents.CreateClientProp(GibModel:format(math.random(1, 5)))
 
 		if not IsValid(Gib) then return end
 
+		local Data = Data
+
 		local Lifetime = GibLife:GetFloat() * math.Rand(0.5, 1)
-		local Offset   = ACF.RandomVector(Min, Max)
+		local Offset   = ACF.RandomVector(Data.EntOBBMins, Data.EntOBBMaxs)
 
-		Offset:Rotate(Data.Angles)
+		local CurrentColor = Data.EntColor
+		local NewColor = Vector(CurrentColor.r, CurrentColor.g, CurrentColor.b) * math.Rand(0.3, 0.6)
 
-		Gib:SetPos(Data.Position + Offset)
+		Offset:Rotate(Data.EntAngles)
+
+		Gib:SetPos(Data.EntPos + Offset)
 		Gib:SetAngles(AngleRand(-180, 180))
 		Gib:SetModelScale(math.Rand(0.5, 2))
-		Gib:SetMaterial(Data.Material)
-		Gib:SetColor(Data.Color)
+		Gib:SetMaterial(Data.EntMaterial)
+		Gib:SetColor(Color(NewColor.r, NewColor.g, NewColor.b, CurrentColor.a))
+
 		Gib:Spawn()
 
-		Gib.SmokeParticle = Particle(Gib, "smoke_gib_01")
+		if DebrisSmoke:GetBool() then
+			Gib.SmokeParticle = Particle(Gib, "smoke_gib_01")
 
-		if math.random() < ACF.DebrisIgniteChance then
-			Ignite(Gib, Lifetime, true)
+			if math.random() < ACF.DebrisIgniteChance then
+				Ignite(Gib, Lifetime, true)
+			end
 		end
 
 		local PhysObj = Gib:GetPhysicsObject()
@@ -196,7 +229,8 @@ do -- Debris Effects ------------------------
 		return true
 	end
 
-	net.Receive("ACF_Debris", function()
+	net.Receive("ACF_Debris", function(len) --compile a table we can use to send to the debris function
+		--[[
 		local Data = util.JSONToTable(net.ReadString())
 
 		if not AllowDebris:GetBool() then return end
@@ -224,6 +258,49 @@ do -- Debris Effects ------------------------
 			Effect:SetOrigin(Data.Position) -- TODO: Change this to the hit vector, but we need to redefine HitVec as HitNorm
 			Effect:SetScale(20)
 		util.Effect("cball_explode", Effect)
+		--]]
+		print("ACFdebris: " .. len)
+
+		if not AllowDebris:GetBool() then return end
+
+		local Entity = net.ReadEntity()
+		local Normal = net.ReadVector()
+		local Power = bit.lshift(net.ReadUInt(15), 8) --bit.lshift returns a new copy of the number and doesn't modify it
+		local Ignite = net.ReadBool()
+
+		local Data = { --now that we have the essentials, we just reconstruct the attack data on our client.
+			Entity = Entity,
+			Normal = Normal,
+			Power = Power,
+			Ignite = Ignite,
+			EntRadius = Entity:BoundingRadius(),
+			EntOBBMins = Entity:OBBMins(),
+			EntOBBMaxs = Entity:OBBMaxs(),
+			EntAngles = Entity:GetAngles(),
+			EntPos = Entity:GetPos(),
+			EntMaterial = Entity:GetMaterial(),
+			EntColor = Entity:GetColor()
+		}
+
+		local Debris = CreateDebris(Data)
+
+		if IsValid(Debris) then
+			local Multiplier = GibMult:GetFloat()
+			--[[
+			local Radius     = Debris:BoundingRadius()
+			local Min        = Debris:OBBMins()
+			local Max        = Debris:OBBMaxs()
+			--]]
+
+			local GibCount = math.Clamp(Data.EntRadius * 0.1, 1, math.max(10 * Multiplier, 1))
+
+			for _ = 1, GibCount do
+				if not CreateGib(Data) then
+					break
+				end
+			end
+		end
+
 	end)
 
 	game.AddParticles("particles/fire_01.pcf")

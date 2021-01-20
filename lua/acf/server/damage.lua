@@ -454,7 +454,7 @@ do -- Deal Damage ---------------------------
 							end
 						end
 
-						net.Start("ACF_RenderDamage")
+						net.Start("ACF_RenderDamage", true)
 							net.WriteTable(Table)
 						net.Broadcast()
 
@@ -506,6 +506,20 @@ do -- Remove Props ------------------------------
 
 	local function SendQueue()
 		for Entity, Data in pairs(Queue) do
+			if not IsValid(Entity) then return end
+
+			local Power = bit.rshift(math.Clamp(Data.Power, 0, 8388607), 8) --remove some numeric precision (increments of 256, maximum unsigned of 8388608 (2^15+8))
+
+			net.Start("ACF_Debris", true)
+				net.WriteEntity(Entity)
+				net.WriteVector(Data.Normal)
+				net.WriteUInt(Power, 15)
+				net.WriteBool(Data.Ignite)
+			net.SendPVS(Data.Pos)
+
+			Queue[Entity] = nil
+
+			--[[
 			local JSON = util.TableToJSON(Data)
 
 			net.Start("ACF_Debris")
@@ -513,10 +527,12 @@ do -- Remove Props ------------------------------
 			net.SendPVS(Data.Position)
 
 			Queue[Entity] = nil
+			--]]
 		end
 	end
 
-	local function DebrisNetter(Entity, Normal, Power, CanGib, Ignite)
+	local function DebrisNetter(Entity, Normal, Power, Ignite)
+		--[[
 		if not ACF.GetServerBool("CreateDebris") then return end
 		if Queue[Entity] then return end
 
@@ -538,6 +554,20 @@ do -- Remove Props ------------------------------
 			CanGib   = CanGib or nil,
 			Ignite   = Ignite or nil,
 		}
+		--]]
+		if Queue[Entity] then return end
+
+		if not next(Queue) then
+			timer.Create("ACF_DebrisQueue", 0, 1, SendQueue)
+		end
+
+		Queue[Entity] = {
+			Pos = Entity:GetPos(),
+			Normal = Normal or Vector(0,0,1),
+			Power = Power or 0,
+			Ignite = Ignite or false
+		}
+
 	end
 
 	function ACF.KillChildProps(Entity, BlastPos, Energy)
@@ -599,7 +629,9 @@ do -- Remove Props ------------------------------
 		local Radius = Entity:BoundingRadius()
 		local Debris = {}
 
-		DebrisNetter(Entity, Normal, Energy, false, true)
+		if ACF.GetServerBool("CreateDebris") then
+			DebrisNetter(Entity, Normal, Energy, true)
+		end
 
 		if ACF.GetServerBool("CreateFireballs") then
 			local Fireballs = math.Clamp(Radius * 0.01, 1, math.max(10 * ACF.GetServerNumber("FireballMult", 1), 1))
@@ -643,13 +675,21 @@ do -- Remove Props ------------------------------
 		return Debris
 	end
 
-	function ACF.APKill(Entity, Normal, Power)
-		ACF.KillChildProps(Entity, Entity:GetPos(), Power) -- kill the children of this ent, instead of disappearing them from removing parent
+	function ACF.APKill(Entity, Normal, Power, HitPos)
+		ACF.KillChildProps(Entity, HitPos, Power) -- kill the children of this ent, instead of disappearing them from removing parent
 
-		DebrisNetter(Entity, Normal, Power, true, false)
+		if ACF.GetServerBool("CreateDebris") then
+			DebrisNetter(Entity, Normal, Power) -- send this ent to clients as new debris
+		end
+
+		local Effect = EffectData()
+			Effect:SetOrigin(HitPos)
+		util.Effect("cball_explode", Effect, nil, true)
 
 		constraint.RemoveAll(Entity)
-		Entity:Remove()
+		Entity:PhysicsDestroy()
+		Entity:SetNoDraw(true)
+		timer.Simple(1, function() Entity:Remove() end)
 	end
 
 	ACF_KillChildProps = ACF.KillChildProps
