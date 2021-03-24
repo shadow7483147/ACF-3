@@ -23,14 +23,32 @@ local Settings = {
 	RestrictInfo = function(_, _, Value)
 		ACF.RestrictInfo = tobool(Value)
 	end,
-	GunfireEnabled = function(_, _, Value)
+	GunsCanFire = function(_, _, Value)
 		local Bool = tobool(Value)
 
-		if ACF.GunfireEnabled == Bool then return end
+		if ACF.GunsCanFire == Bool then return end
 
-		ACF.GunfireEnabled = Bool
+		ACF.GunsCanFire = Bool
 
 		Message("Info", "ACF Gunfire has been " .. (Bool and "enabled." or "disabled."))
+	end,
+	GunsCanSmoke = function(_, _, Value)
+		local Bool = tobool(Value)
+
+		if ACF.GunsCanSmoke == Bool then return end
+
+		ACF.GunsCanSmoke = Bool
+
+		Message("Info", "ACF Gun sound and particles have been " .. (Bool and "enabled." or "disabled."))
+	end,
+	RacksCanFire = function(_, _, Value)
+		local Bool = tobool(Value)
+
+		if ACF.RacksCanFire == Bool then return end
+
+		ACF.RacksCanFire = Bool
+
+		Message("Info", "ACF Missile Racks have been " .. (Bool and "enabled." or "disabled."))
 	end,
 	HealthFactor = function(_, _, Value)
 		local Factor = math.Clamp(math.Round(tonumber(Value) or 1, 2), 0.01, 2)
@@ -99,6 +117,8 @@ local Settings = {
 
 		ACF.WorkshopContent = Bool
 
+		if CLIENT then return end
+
 		Message("Info", "ACF Workshop Content download has been " .. (Bool and "enabled." or "disabled."))
 	end,
 	WorkshopExtras = function(_, _, Value)
@@ -107,6 +127,8 @@ local Settings = {
 		if ACF.WorkshopExtras == Bool then return end
 
 		ACF.WorkshopExtras = Bool
+
+		if CLIENT then return end
 
 		Message("Info", "ACF Extra Workshop Content download has been " .. (Bool and "enabled." or "disabled."))
 	end,

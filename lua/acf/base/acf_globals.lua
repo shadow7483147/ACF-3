@@ -5,13 +5,13 @@ do -- ACF global vars
 	ACF.Repositories       = ACF.Repositories or {}
 	ACF.ClientData         = ACF.ClientData or {}
 	ACF.ServerData         = ACF.ServerData or {}
+	ACF.CurTime            = CurTime()
 
 	-- General Settings
 	ACF.Gamemode           = 2 -- Gamemode of the server. 1 = Sandbox, 2 = Classic, 3 = Competitive
 	ACF.Year               = 1945
 	ACF.IllegalDisableTime = 30 -- Time in seconds for an entity to be disabled when it fails ACF_IsLegal
 	ACF.RestrictInfo       = true -- If enabled, players will be only allowed to get info from entities they're allowed to mess with.
-	ACF.GunfireEnabled     = true
 	ACF.AllowAdminData     = false -- Allows admins to mess with a few server settings and data variables
 	ACF.HEPush             = true -- Whether or not HE pushes on entities
 	ACF.KEPush             = true -- Whether or not kinetic force pushes on entities
@@ -21,6 +21,15 @@ do -- ACF global vars
 	ACF.WorkshopContent    = true -- Enable workshop content download for clients
 	ACF.WorkshopExtras     = false -- Enable extra workshop content download for clients
 	ACF.SmokeWind          = 5 + math.random() * 35 --affects the ability of smoke to be used for screening effect
+	ACF.LinkDistance       = 650 -- Maximum distance, on inches, at which components will remain linked with each other
+
+	ACF.GunsCanFire        = true
+	ACF.GunsCanSmoke       = true
+	ACF.RacksCanFire       = true
+
+	-- Unit Conversion
+	ACF.MeterToInch        = 39.3701 -- Meters to inches
+	ACF.gCmToKgIn          = 0.016387064 -- g/cm³ to kg/in³ :face_vomiting: :face_vomiting: :face_vomiting:
 
 	-- Fuzes
 	ACF.MinFuzeCaliber     = 20 -- Minimum caliber in millimeters that can be fuzed
@@ -41,7 +50,6 @@ do -- ACF global vars
 	ACF.GroundtoRHA        = 0.15 --How much mm of steel is a mm of ground worth (Real soil is about 0.15)
 	ACF.ArmorMod           = 1
 	ACF.ArmorFactor        = 1 -- Multiplier for ACF.ArmorMod
-	ACF.SlopeEffectFactor  = 1.1 -- Sloped armor effectiveness: armor / cos(angle)^factor
 	ACF.GlobalFilter = { -- Global ACF filter
 		gmod_ghost = true,
 		acf_debris = true,
@@ -56,9 +64,10 @@ do -- ACF global vars
 
 	-- Ammo
 	ACF.AmmoArmor          = 5 -- How many millimeters of armor ammo crates have
-	ACF.AmmoPadding        = 2 -- Millimeters of wasted space between rounds
-	ACF.AmmoMod            = 1.05 -- DEPRECATED. Ammo modifier. 1 is 1x the amount of ammo. 0.6 default
+	ACF.AmmoPadding        = 10 -- Millimeters of wasted space between rounds
 	ACF.AmmoCaseScale      = 1.4 -- How much larger the diameter of the case is versus the projectile (necked cartridges, M829 is 1.4, .50 BMG is 1.6) 
+	ACF.AmmoMinSize        = 6 -- Defines the shortest possible length of ammo crates for all their axises, in gmu
+	ACF.AmmoMaxSize        = 96 -- Defines the highest possible length of ammo crates for all their axises, in gmu
 	ACF.PBase              = 875 --1KG of propellant produces this much KE at the muzzle, in kj
 	ACF.PScale             = 1 --Gun Propellant power expotential
 	ACF.MVScale            = 0.5 --Propellant to MV convertion expotential
@@ -104,9 +113,8 @@ do -- ACF global vars
 	ACF.CompFuelFactor     = 1 -- Multiplier for ACF.CompFuelRate
 	ACF.TankVolumeMul      = 1 -- multiplier for fuel tank capacity, 1.0 is approx real world
 	ACF.LiIonED            = 0.458 -- li-ion energy density: kw hours / liter
-	ACF.CuIToLiter         = 0.0163871 -- cubic inches to liters
 	ACF.RefillDistance     = 300 --Distance in which ammo crate starts refilling.
-	ACF.RefillSpeed        = 700 -- (ACF.RefillSpeed / RoundMass) / Distance 
+	ACF.RefillSpeed        = 700 -- (ACF.RefillSpeed / RoundMass) / Distance
 	ACF.RefuelSpeed        = 20 -- Liters per second * ACF.FuelRate
 end
 
@@ -131,7 +139,7 @@ if SERVER then
 			resource.AddWorkshop("2099387099") -- ACF-3 Removed Extra Sounds
 		end
 
-		hook.Add("PlayerConnect", "ACF Workshop Content")
+		hook.Remove("PlayerConnect", "ACF Workshop Content")
 	end)
 elseif CLIENT then
 	CreateClientConVar("acf_show_entity_info", 1, true, false, "Defines under what conditions the info bubble on ACF entities will be shown. 0 = Never, 1 = When not seated, 2 = Always", 0, 2)

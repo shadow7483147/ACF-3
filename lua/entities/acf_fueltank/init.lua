@@ -61,6 +61,9 @@ do -- Spawn and Update functions
 		local FuelData = FuelTypes[Data.FuelType]
 		local Percentage = 1
 
+		Entity.ACF = Entity.ACF or {}
+		Entity.ACF.Model = FuelTank.Model -- Must be set before changing model
+
 		Entity:SetModel(FuelTank.Model)
 
 		Entity:PhysicsInit(SOLID_VPHYSICS)
@@ -85,7 +88,7 @@ do -- Spawn and Update functions
 		Entity.ClassData   = Class
 		Entity.FuelDensity = FuelData.Density
 		Entity.Volume      = PhysObj:GetVolume() - (Area * Wall) -- total volume of tank (cu in), reduced by wall thickness
-		Entity.Capacity    = Entity.Volume * ACF.CuIToLiter * ACF.TankVolumeMul * 0.4774 --internal volume available for fuel in liters, with magic realism number
+		Entity.Capacity    = Entity.Volume * ACF.gCmToKgIn * ACF.TankVolumeMul * 0.4774 --internal volume available for fuel in liters, with magic realism number
 		Entity.EmptyMass   = (Area * Wall) * 16.387 * (7.9 / 1000) -- total wall volume * cu in to cc * density of steel (kg/cc)
 		Entity.IsExplosive = FuelTank.IsExplosive
 		Entity.NoLinks     = FuelTank.Unlinkable
@@ -106,8 +109,6 @@ do -- Spawn and Update functions
 		Entity.Fuel = Percentage * Entity.Capacity
 
 		ACF.Activate(Entity, true)
-
-		Entity.ACF.Model = FuelTank.Model
 
 		Entity:UpdateMass(true)
 
@@ -269,15 +270,16 @@ function ENT:ACF_Activate(Recalc)
 	self.ACF.Type = "Prop"
 end
 
-function ENT:ACF_OnDamage(Energy, FrArea, Angle, Inflictor, _, Type)
-	local Mul = Type == "HEAT" and ACF.HEATMulFuel or 1 --Heat penetrators deal bonus damage to fuel
-	local HitRes = ACF.PropDamage(self, Energy, FrArea * Mul, Angle, Inflictor) --Calling the standard damage prop function
+function ENT:ACF_OnDamage(Bullet, Trace)
+	local HitRes = ACF.PropDamage(Bullet, Trace) --Calling the standard damage prop function
 	local NoExplode = self.FuelType == "Diesel" and not (Type == "HE" or Type == "HEAT")
 
 	if self.Exploding or NoExplode or not self.IsExplosive then return HitRes end
 
 	if HitRes.Kill then
 		if HookRun("ACF_FuelExplode", self) == false then return HitRes end
+
+		local Inflictor = Bullet.Owner
 
 		if IsValid(Inflictor) and Inflictor:IsPlayer() then
 			self.Inflictor = Inflictor
@@ -347,7 +349,6 @@ do -- Mass Update
 		local PhysObj = Entity.ACF.PhysObj
 
 		Entity.ACF.LegalMass = Mass
-		Entity.ACF.Density = Mass * 1000 / Entity.ACF.Volume
 
 		if IsValid(PhysObj) then
 			PhysObj:SetMass(Mass)

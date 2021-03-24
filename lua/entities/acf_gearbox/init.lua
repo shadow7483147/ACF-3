@@ -318,6 +318,9 @@ do -- Spawn and Update functions
 	end
 
 	local function UpdateGearbox(Entity, Data, Class, Gearbox)
+		Entity.ACF = Entity.ACF or {}
+		Entity.ACF.Model = Gearbox.Model -- Must be set before changing model
+
 		Entity:SetModel(Gearbox.Model)
 
 		Entity:PhysicsInit(SOLID_VPHYSICS)
@@ -342,7 +345,7 @@ do -- Spawn and Update functions
 		Entity.In           = Entity:WorldToLocal(Entity:GetAttachment(Entity:LookupAttachment("input")).Pos)
 		Entity.OutL         = Entity:WorldToLocal(Entity:GetAttachment(Entity:LookupAttachment("driveshaftL")).Pos)
 		Entity.OutR         = Entity:WorldToLocal(Entity:GetAttachment(Entity:LookupAttachment("driveshaftR")).Pos)
-		Entity.HitBoxes     = ACF.HitBoxes[Gearbox.Model]
+		Entity.HitBoxes     = ACF.GetHitboxes(Gearbox.Model)
 
 		CreateInputs(Entity, Data, Class, Gearbox)
 		CreateOutputs(Entity, Data, Class, Gearbox)
@@ -779,7 +782,7 @@ function ENT:Calc(InputRPM, InputInertia)
 		self.InGear = true
 	end
 
-	local BoxPhys = self:GetPhysicsObject()
+	local BoxPhys = ACF_GetAncestor(self):GetPhysicsObject()
 	local SelfWorld = BoxPhys:LocalToWorldVector(BoxPhys:GetAngleVelocity())
 
 	if self.CVT and self.Gear == 1 then
@@ -866,7 +869,7 @@ function ENT:ApplyBrakes() -- This is just for brakes
 	if not self.Braking then return end -- Kills the whole thing if its not supposed to be running
 	if not next(self.Wheels) then return end -- No brakes for the non-wheel users
 
-	local BoxPhys = self:GetPhysicsObject()
+	local BoxPhys = ACF_GetAncestor(self):GetPhysicsObject()
 	local SelfWorld = BoxPhys:LocalToWorldVector(BoxPhys:GetAngleVelocity())
 	local DeltaTime = math.min(ACF.CurTime - self.LastBrakeThink, engine.TickInterval()) -- prevents from too big a multiplier, because LastBrakeThink only runs here
 

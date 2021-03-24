@@ -44,7 +44,7 @@ function Ammo:UpdateRoundData(ToolData, Data, GUIData)
 	local ProjMass	  = math.max(GUIData.ProjVolume - ToolData.SmokeFiller, 0) * 0.0079 + math.min(ToolData.SmokeFiller, GUIData.ProjVolume) * ACF.HEDensity * 0.0005
 	local MuzzleVel	  = ACF_MuzzleVelocity(Data.PropMass, ProjMass)
 	local Energy	  = ACF_Kinetic(MuzzleVel * 39.37, ProjMass, Data.LimitVel)
-	local MaxCapacity = ACF.RoundShellCapacity(Energy.Momentum, Data.FrArea, Data.Caliber, Data.ProjLength)
+	local MaxCapacity = ACF.RoundShellCapacity(Energy.Momentum, Data.ProjArea, Data.Caliber, Data.ProjLength)
 	local MaxVolume	  = math.Round(math.min(GUIData.ProjVolume, MaxCapacity), 2)
 	local SmokeFiller = math.Clamp(ToolData.SmokeFiller, GUIData.MinFillerVol, MaxVolume)
 	local WPFiller	  = math.Clamp(ToolData.WPFiller, GUIData.MinFillerVol, MaxVolume)
@@ -63,7 +63,7 @@ function Ammo:UpdateRoundData(ToolData, Data, GUIData)
 	Data.WPMass		= GUIData.WPVol * ACF.HEDensity * 0.0005
 	Data.ProjMass	= math.max(GUIData.ProjVolume - (GUIData.FillerVol + GUIData.WPVol), 0) * 0.0079 + Data.FillerMass + Data.WPMass
 	Data.MuzzleVel	= ACF_MuzzleVelocity(Data.PropMass, Data.ProjMass)
-	Data.DragCoef	= Data.FrArea * 0.0001 / Data.ProjMass
+	Data.DragCoef	= Data.ProjArea * 0.0001 / Data.ProjMass
 	Data.CartMass	= Data.PropMass + Data.ProjMass
 
 	hook.Run("ACF_UpdateRoundData", self, ToolData, Data, GUIData)
@@ -79,9 +79,8 @@ function Ammo:BaseConvert(ToolData)
 	GUIData.MinFillerVol = 0
 
 	Data.ShovePower		= 0.1
-	Data.PenArea		= Data.FrArea ^ ACF.PenAreaMod
+	Data.PenArea		= Data.ProjArea ^ ACF.PenAreaMod
 	Data.LimitVel		= 100 --Most efficient penetration speed in m/s
-	Data.KETransfert	= 0.1 --Kinetic energy transfert to the target for movement purposes
 	Data.Ricochet		= 60 --Base ricochet angle
 	Data.DetonatorAngle	= 80
 	Data.CanFuze		= Data.Caliber * 10 > ACF.MinFuzeCaliber -- Can fuze on calibers > 20mm
@@ -154,12 +153,14 @@ if SERVER then
 	end
 
 	function Ammo:PropImpact(Bullet, Trace)
-		local Target = Trace.Entity
-
-		if ACF.Check(Target) then
+		if ACF.Check(Trace.Entity) then
 			local Speed  = Bullet.Flight:Length() / ACF.Scale
-			local Energy = ACF_Kinetic(Speed, Bullet.ProjMass - (Bullet.FillerMass + Bullet.WPMass), Bullet.LimitVel)
-			local HitRes = ACF_RoundImpact(Bullet, Speed, Energy, Target, Trace.HitPos, Trace.HitNormal, Trace.HitGroup)
+			local Energy = ACF_Kinetic(Speed, Bullet.ProjMass, Bullet.LimitVel)
+
+			Bullet.Speed  = Speed
+			Bullet.Energy = Energy
+
+			local HitRes = ACF_RoundImpact(Bullet, Trace)
 
 			if HitRes.Ricochet then return "Ricochet" end
 		end

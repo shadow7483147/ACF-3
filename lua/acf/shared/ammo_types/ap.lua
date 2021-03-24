@@ -28,10 +28,10 @@ function Ammo:UpdateRoundData(ToolData, Data, GUIData)
 
 	ACF.UpdateRoundSpecs(ToolData, Data, GUIData)
 
-	Data.ProjMass  = Data.FrArea * Data.ProjLength * 0.0079 --Volume of the projectile as a cylinder * density of steel
-	Data.MuzzleVel = ACF_MuzzleVelocity(Data.PropMass, Data.ProjMass)
-	Data.DragCoef  = Data.FrArea * 0.0001 / Data.ProjMass
-	Data.CartMass  = Data.PropMass + Data.ProjMass
+	Data.ProjMass   = Data.ProjArea * Data.ProjLength * 0.0079 --Volume of the projectile as a cylinder * density of steel
+	Data.MuzzleVel  = ACF_MuzzleVelocity(Data.PropMass, Data.ProjMass)
+	Data.DragCoef   = Data.ProjArea * 0.0001 / Data.ProjMass
+	Data.CartMass   = Data.PropMass + Data.ProjMass
 
 	hook.Run("ACF_UpdateRoundData", self, ToolData, Data, GUIData)
 
@@ -43,11 +43,10 @@ end
 function Ammo:BaseConvert(ToolData)
 	local Data, GUIData = ACF.RoundBaseGunpowder(ToolData, {})
 
-	Data.ShovePower	 = 0.2
-	Data.PenArea	 = Data.FrArea ^ ACF.PenAreaMod
-	Data.LimitVel	 = 800 --Most efficient penetration speed in m/s
-	Data.KETransfert = 0.1 --Kinetic energy transfert to the target for movement purposes
-	Data.Ricochet	 = 60 --Base ricochet angle
+	Data.ShovePower = 0.2
+	Data.PenArea    = Data.ProjArea ^ ACF.PenAreaMod
+	Data.LimitVel   = 800 --Most efficient penetration speed in m/s
+	Data.Ricochet   = 60 --Base ricochet angle
 
 	self:UpdateRoundData(ToolData, Data, GUIData)
 
@@ -128,7 +127,11 @@ if SERVER then
 		if ACF.Check(Target) then
 			local Speed  = Bullet.Flight:Length() / ACF.Scale
 			local Energy = ACF_Kinetic(Speed, Bullet.ProjMass, Bullet.LimitVel)
-			local HitRes = ACF_RoundImpact(Bullet, Speed, Energy, Target, Trace.HitPos, Trace.HitNormal, Trace.HitGroup)
+
+			Bullet.Speed  = Speed
+			Bullet.Energy = Energy
+
+			local HitRes = ACF_RoundImpact(Bullet, Trace)
 
 			if HitRes.Overkill > 0 then
 				table.insert(Bullet.Filter, Target) --"Penetrate" (Ingoring the prop for the retry trace)
@@ -149,7 +152,7 @@ if SERVER then
 	end
 
 	function Ammo:WorldImpact(Bullet, Trace)
-		if IsValid(Trace.Entity) then
+		if ACF.Check(Trace.Entity) then
 			return ACF_PenetrateMapEntity(Bullet, Trace)
 		else
 			return ACF_PenetrateGround(Bullet, Trace)
@@ -178,8 +181,9 @@ else
 		return Data
 	end
 
-	function Ammo:AddAmmoPreview(Preview)
-		Preview:SetModel(self.Model)
+	function Ammo:AddAmmoPreview(_, Setup)
+		Setup.Model = self.Model
+		Setup.FOV   = 60
 	end
 
 	function Ammo:ImpactEffect(_, Bullet)

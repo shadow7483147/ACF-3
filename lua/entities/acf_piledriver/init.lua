@@ -84,8 +84,15 @@ do -- Spawning and Updating --------------------
 		local Scale   = Caliber / Class.Caliber.Base
 		local Mass    = math.floor(Class.Mass * Scale)
 
+		Entity.ACF.Model = Class.Model -- Must be set before changing model
+
 		Entity:SetModel(Class.Model)
 		Entity:SetScale(Scale)
+
+		-- Storing all the relevant information on the entity for duping
+		for _, V in ipairs(Entity.DataStore) do
+			Entity[V] = Data[V]
+		end
 
 		Entity.Name        = Caliber .. "mm " .. Class.Name
 		Entity.ShortName   = Caliber .. "mm" .. Class.ID
@@ -154,18 +161,12 @@ do -- Spawning and Updating --------------------
 			WireLib.TriggerOutput(Entity, "Muzzle Velocity", math.Round(BulletData.MuzzleVel * ACF.Scale, 2))
 		end
 
-		-- Storing all the relevant information on the entity for duping
-		for _, V in ipairs(Entity.DataStore) do
-			Entity[V] = Data[V]
-		end
-
 		-- Set NWvars
 		Entity:SetNWString("WireName", "ACF " .. Entity.Name)
 
 		ACF.Activate(Entity, true)
 
 		Entity.ACF.LegalMass = Mass
-		Entity.ACF.Model     = Class.Model
 
 		local Phys = Entity:GetPhysicsObject()
 
@@ -197,6 +198,7 @@ do -- Spawning and Updating --------------------
 		Entity:SetPos(Pos)
 		Entity:Spawn()
 
+		Entity.ACF          = {}
 		Entity.Owner        = Player -- MUST be stored on ent for PP
 		Entity.RoundData    = AmmoTypes.HP()
 		Entity.LastThink    = ACF.CurTime
@@ -278,6 +280,7 @@ do -- Entity Activation ------------------------
 		self.ACF.Armour    = Armour * (0.5 + Percent * 0.5)
 		self.ACF.MaxArmour = Armour
 		self.ACF.Type      = "Prop"
+		self.ACF.Ductility = 0
 	end
 end --------------------------------------------
 
@@ -340,7 +343,7 @@ do -- Firing ------------------------------------
 
 	-- The entity should produce a "click" sound if this function returns false
 	function ENT:CanShoot()
-		if not ACF.GunfireEnabled then return false end
+		if not ACF.GunsCanFire then return false end
 		if not ACF.AllowFunEnts then return false end
 		if hook.Run("ACF_FireShell", self) == false then return false end
 
